@@ -16,11 +16,16 @@ from psychopy import core, event, visual  # import some libraries from PsychoPy
 from speller_configFERC import *
 
 from utils.common import drawTextOnScreen, getdata_offline, save_raw
-from utils.gui_hybrid import Stimuli, get_screen_settings
+from utils.gui_FERC import Stimuli, get_screen_settings
 import mne
-
+##########################
+# READ ME
+# Following code is from https://github.com/sunsun101/hybrid-ssvep-p300-speller
+# The file that should be imported also are: 
+# 1) speller_configFERC.py 
+# 2) gui_subspellerFERC.py 
 # a = beeps(800)
-
+##########################
 # Window parameters
 system = platform.system()
 width, height = get_screen_settings(system)
@@ -59,8 +64,8 @@ flickers = {f"{target}":Stimuli(window=window, frequency=f, phase=phase, amplitu
                                     base_pos=pos, height=HEIGHT, width=WIDTH)
             for f, pos, phase, target in zip(FREQS, POSITIONS, PHASES, TARGET_CHARACTERS)}
 
-# hori_divider = visual.Line(window, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
-# ver_divider_1 = visual.Line(window, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
+hori_divider = visual.Line(window, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
+ver_divider_1 = visual.Line(window, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
 
 block_break_text = f"Block Break {BLOCK_BREAK} sec. Please do not move towards the end of break."
 # block_break_start = visual.TextStim(window, text=block_break_text, color=(1., 1., 1.))
@@ -110,7 +115,9 @@ def flicker(board):
         # m: is each character in the sub speller
         # f: is frame_idx
         start_time = trialClock.getTime()
-        timeline = gen_timeline(n=NO_SUBSPELLER, m=NO_CHARACTER, overlap=0.5, isShuffle=False)
+        # Generate the order of flashing
+        timeline = gen_timeline(n=NO_SUBSPELLER, r=NO_ROW, c=NO_COL, overlap=0, isShuffle=False, phase = 3)
+
         # marked:bool = False
         eegMarking(board,marker)
         for t_idx in range(timeline.shape[2]):
@@ -123,24 +130,23 @@ def flicker(board):
                     if(frame[idx] == -1):
                         flickers[char].draw2(frame=frame[idx], amp_override=-1)
                     else:
-                        # if(marked == False and char == target):
-                        #     eegMarking(board,marker)
-                        #     marked = True
                         flickers[char].draw2(frame=frame[idx])
+                
             window.flip()
         stop_time = trialClock.getTime()
         print("Elapsed time ==>", stop_time - start_time, timeline.shape)
+        print("Timeline Shape ==>", timeline.shape[2], range(timeline.shape[2]))
 
 
-def gen_timeline(n:int, m:int, overlap:float, isShuffle:bool=False):
+def gen_timeline(n:int, r:int, c:int, overlap:float, isShuffle:bool=False):
     import numpy as np
     timeline = []
     for _ in range(n):
-        timeline.append(gen_timeline_subspeller(m, overlap, isShuffle))
+        timeline.append(gen_timeline_FERC(r, c, overlap, isShuffle))
     timeline = np.vstack(timeline)
     return timeline
 
-def gen_timeline_subspeller(m:int, overlap:float, isShuffle:bool=False):
+def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, phase = 2):
     # overlap:float
     #   0: No 2 stimuli flicker at the same time
     # 0.5: 2 stimuli overlap by half
@@ -151,33 +157,39 @@ def gen_timeline_subspeller(m:int, overlap:float, isShuffle:bool=False):
     # characters = list(range(m))
     # if(isShuffle):
     #     random.shuffle(characters)
-
-    n = m
-    d = epoch_frames
-    # print("d ==>", d)
-    # print("n ==>", n)
-    # print("overlap ==>", overlap)
-    t = int(d*(((n-1) * (1-overlap)) + 1))
-    # print("t ==>", t)
+    m = r*c # row and column must flash by number of rows and columns
+    d = epoch_frames//m
+    t = int(d*(((m-1) * (1-overlap)) + 1))
     # print(f"{n=} {m=} {d=} {t=}")
-    timeline = np.zeros((n, t), dtype=int)
+    timeline = np.ones((m, t), dtype=int)*-1
     # print(f"{timeline.shape}")
-    for i in range(n):
-        start_offset = int(i * d * (1 - overlap))
-        end_offset = start_offset + d
-        # print(f"{i=} {start_offset=} {end_offset=}")
-        # idx = characters.index(characters[i])
-        timeline[i, start_offset:end_offset] = range(1,d+1)
-    timeline += -1
+    start = 0
+    part_shuffle = []
 
-    # if(isShuffle):
-    #     np.random.shuffle(timeline)
-    # print("Timeline shape before adding dimension ==>", timeline.shape)
-    # print(timeline)
+    # Looping for the order in each rows and columns by col 1- col n and then row 1 - row n
+    for i in range(m):
+        part = (int(i * d * (1 - overlap)) + d)
+        if(i==0):
+            part_shuffle.append(list(range(start,part)))
+        else:
+            part_shuffle.append(list(range(start-phase,part)))
+        start = part
+    # If we randomise the orther, this following function will shuffle the order above
+    if(isShuffle):
+        np.random.shuffle(part_shuffle)
     
+    # this loop is for generating timeline using order above
+    for i in range(m):
+        j=0
+        if(i>m//2): #in case of column, we skip the order by number of column because we order the alphaet by row in this case.
+            j+=c
+        if(i < m//2): # ROW FLASHING
+            timeline[i::2, part_shuffle[i]] = 1
+        else: # COLUMN FLASHING
+            timeline[j:j+2, part_shuffle[i]] = 1
+        start = part
+
     timeline = np.expand_dims(timeline, axis=0)
-    # print("Timeline shape after adding dimension ==>", timeline.shape)
-    # print(timeline)
     return timeline
 
 
@@ -185,10 +197,8 @@ def main():
     global sequence
     global trialClock
 
-    # random.seed(42)
+    random.seed(42)
 
-    # for key in SUBSPELLERS:
-    #     random.shuffle(SUBSPELLERS[key])
 
     BoardShim.enable_dev_board_logger()
 
@@ -221,12 +231,12 @@ def main():
             # a.hear('A_')
             drawTextOnScreen('Starting block ' + str(block + 1) ,window)
             core.wait(0.5)
-            sequence = random.sample(TARGET_CHARACTERS, len(TARGET_CHARACTERS))
+            sequence = TARGET_CHARACTERS
             for trials in range(NUM_TRIAL):
                 get_keypress()
                 # Drawing the grid
-                # hori_divider.autoDraw = True
-                # ver_divider_1.autoDraw = True
+                hori_divider.autoDraw = True
+                ver_divider_1.autoDraw = True
                 # Display target characters
                 for target in targets.values():
                     target.autoDraw = True
@@ -241,8 +251,8 @@ def main():
 
            
             # clearing the screen
-            # hori_divider.autoDraw = False
-            # ver_divider_1.autoDraw = False
+            hori_divider.autoDraw = False
+            ver_divider_1.autoDraw = False
             for target in targets.values():
                 target.autoDraw = False
 

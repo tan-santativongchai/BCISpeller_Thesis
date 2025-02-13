@@ -17,19 +17,20 @@ SIZE: int = 100
 NUM_BLOCK: int = 10
 NUM_TRIAL: int = 2
 NUM_SESSION: int = 3
-EPOCH_DURATION: float = 2
+EPOCH_DURATION: float = 1
 ITI_DURATION: float = 0.1
 CUE_DURATION: float = 1
 # For 9 targets: No. of subspeller = 3; No. of Character = 3
 # For 16 targets: No. of subspeller = 4; No. of Character = 4
-NO_SUBSPELLER: int = 3 # subspeller available n the experiment
-NO_CHARACTER: int = 3 # number of characters in each subspellers
+NO_SUBSPELLER: int = 4 # subspeller available n the experiment
+NO_ROW: int = 2 
+NO_COL: int = 2# number of characters in each subspellers
 OFFSET_VALUE: int = 1250
 
 #9 targets
 # FREQS: list = [8, 8, 8, 8.6, 8.6, 8.6, 9, 9, 9]
 #16 targets
-FREQS: list = [8, 8, 8.6, 8.6, 8, 8, 8.6, 8.6, 9, 9, 9.6, 9.6, 9, 9 ,9.6, 9.6]
+FREQS: list = [1]*16
 
 ###########################
 # POSITION
@@ -41,7 +42,7 @@ FREQS: list = [8, 8, 8.6, 8.6, 8, 8, 8.6, 8.6, 9, 9, 9.6, 9.6, 9, 9 ,9.6, 9.6]
 #16 targets
 POSITIONS: list = [(-800, 300), (- 400, 300), (400, 300), (800, 300), (-800, 100), (- 400, 100), (400, 100), (800, 100),(-800, -100), (- 400, -100), (400, -100), (800, -100), (-800,-300), (-400, -300), (400, -300), (800, -300)]
 
-AMPLITUDE: float = 1.0
+AMPLITUDE: float = 2
 
 ###########################
 # PHASE
@@ -49,10 +50,9 @@ AMPLITUDE: float = 1.0
 
 #9 targets
 # PHASES: list = [0 , 1 , 1.5 , 0 , 1, 1.5, 0, 1, 1.5]
+
 #16 targets
-# PHASES: list = [0 , 0 , 1.05 , 1.05, 0 , 0, 1.05 , 1.05 , 1.75 , 1.75, 0.80 , 0.80, 1.75, 1.75, 0.80, 0.80]
-#16 targets
-PHASES: list = [0 , 0.05 , 1.05 , 1.10, 0.10 , 0.15, 1.15 , 1.20 , 1.60 , 1.65, 0.80 , 0.85, 1.70, 1.75, 0.9, 0.95]
+PHASES: list = [0 , 0 , 0 , 0, 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 ###########################
 # TARGET CHARACTERS
@@ -86,7 +86,7 @@ SERIAL_PORT:str = "COM3"
 BOARD_ID:int = -1 #-1 for Synthetic; and 8 for Unicorn. ref.  https://brainflow.readthedocs.io/en/stable/UserAPI.html#brainflow-board-shim
 PARTICIPANT_ID:str = "Test_1"
 # PARTICIPANT_ID:str="test"
-RECORDING_DIR:str = "record_Sub"
+RECORDING_DIR:str = "record_SubFERC"
 TYPE_OF_FILE:str = ".fif"
 CSV_DIR:str = "csv/"
 BLOCK_BREAK:int = 60

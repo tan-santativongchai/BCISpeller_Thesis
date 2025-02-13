@@ -6,7 +6,8 @@ import logging
 import platform
 import random
 import time
-from multiprocessing import Process
+import multiprocessing as mp
+from functools import partial
 
 import brainflow
 import numpy as np
@@ -59,8 +60,8 @@ flickers = {f"{target}":Stimuli(window=window, frequency=f, phase=phase, amplitu
                                     base_pos=pos, height=HEIGHT, width=WIDTH)
             for f, pos, phase, target in zip(FREQS, POSITIONS, PHASES, TARGET_CHARACTERS)}
 
-# hori_divider = visual.Line(window, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
-# ver_divider_1 = visual.Line(window, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
+hori_divider = visual.Line(window, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
+ver_divider_1 = visual.Line(window, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
 
 block_break_text = f"Block Break {BLOCK_BREAK} sec. Please do not move towards the end of break."
 # block_break_start = visual.TextStim(window, text=block_break_text, color=(1., 1., 1.))
@@ -81,10 +82,24 @@ def eegMarking(board,marker):
     board.insert_marker(marker)
     time.sleep(0.1)
 
+def flickerDraw(t_idx, timeline):
+    get_keypress()
+    for n_idx in range(timeline.shape[0]):
+        frame = timeline[n_idx,:,t_idx]
+        chars = SUBSPELLERS[str(n_idx+1)]
+        for idx, char in enumerate(chars):
+            get_keypress()
+            if(frame[idx] == -1):
+                flickers[char].draw2(frame=frame[idx], amp_override=-1)
+            else:
+                # if(marked == False and char == target):
+                #     eegMarking(board,marker)
+                #     marked = True
+                flickers[char].draw2(frame=frame[idx])
+    window.flip()
+
 def flicker(board):
     print("POSITIONS", POSITIONS)
-    global frames
-    global t0
     # For the flickering
     for target in sequence:
         get_keypress()
@@ -92,16 +107,16 @@ def flicker(board):
         target_pos = (target_flicker.base_x, target_flicker.base_y)
         marker = MARKERS[str(target)]
 
-
         t0 = trialClock.getTime()  # Retrieve time at start of cue presentation
         #Display the cue
         cue.pos = target_pos
         for frame in range(cue_frames):
                 cue.draw()
                 window.flip()
-
+                get_keypress()
         frames = 0
         # eegMarking(board, MARKERS['trial_start'])
+        timeline = gen_timeline(n=NO_SUBSPELLER, m=NO_CHARACTER, overlap=0.5, isShuffle=False)
         
         # IDEA
         # Generating an entire epoch of frames
@@ -109,28 +124,15 @@ def flicker(board):
         # n: number of sub-speller
         # m: is each character in the sub speller
         # f: is frame_idx
+        
         start_time = trialClock.getTime()
-        timeline = gen_timeline(n=NO_SUBSPELLER, m=NO_CHARACTER, overlap=0.5, isShuffle=False)
         # marked:bool = False
         eegMarking(board,marker)
-        for t_idx in range(timeline.shape[2]):
-            get_keypress()
-            for n_idx in range(timeline.shape[0]):
-                frame = timeline[n_idx,:,t_idx]
-                chars = SUBSPELLERS[str(n_idx+1)]
-                for idx, char in enumerate(chars):
-                    get_keypress()
-                    if(frame[idx] == -1):
-                        flickers[char].draw2(frame=frame[idx], amp_override=-1)
-                    else:
-                        # if(marked == False and char == target):
-                        #     eegMarking(board,marker)
-                        #     marked = True
-                        flickers[char].draw2(frame=frame[idx])
-            window.flip()
+        with mp.Pool(processes=3) as pool:
+            pool.map(partial(flickerDraw, timeline=timeline), range(timeline.shape[2]))
         stop_time = trialClock.getTime()
         print("Elapsed time ==>", stop_time - start_time, timeline.shape)
-
+        print("Range ==>", range(timeline.shape[0]))
 
 def gen_timeline(n:int, m:int, overlap:float, isShuffle:bool=False):
     import numpy as np
@@ -180,10 +182,22 @@ def gen_timeline_subspeller(m:int, overlap:float, isShuffle:bool=False):
     # print(timeline)
     return timeline
 
+def drawDisplayBox():
+    # Drawing the grid
+    hori_divider.autoDraw = True
+    ver_divider_1.autoDraw = True
+    # Display target characters
+    for target in targets.values():
+        target.autoDraw = True
+        # get_keypress()
+    print("Sequence is", sequence)
 
 def main():
     global sequence
     global trialClock
+
+    global frames
+    global t0
 
     random.seed(42)
 
@@ -224,25 +238,22 @@ def main():
             sequence = random.sample(TARGET_CHARACTERS, len(TARGET_CHARACTERS))
             for trials in range(NUM_TRIAL):
                 get_keypress()
-                # Drawing the grid
-                # hori_divider.autoDraw = True
-                # ver_divider_1.autoDraw = True
-                # Display target characters
-                for target in targets.values():
-                    target.autoDraw = True
-                    # get_keypress()
-                print("Sequence is", sequence)
-                flicker(board_shim)
+                
+                p1 = mp.Process(target = drawDisplayBox)
+                p2 = mp.Process(target = flicker, args=(board_shim,))
+                p1.run()
+                p2.run()
                 # At the end of the trial, calculate real duration and amount of frames
                 t1 = trialClock.getTime()  # Time at end of trial
                 elapsed = t1 - t0
                 print(f"Time elapsed: {elapsed}")
                 print(f"Total frames: {frames}")
+                get_keypress()
 
            
             # clearing the screen
-            # hori_divider.autoDraw = False
-            # ver_divider_1.autoDraw = False
+            hori_divider.autoDraw = False
+            ver_divider_1.autoDraw = False
             for target in targets.values():
                 target.autoDraw = False
 

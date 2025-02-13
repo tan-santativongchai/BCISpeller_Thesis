@@ -22,8 +22,8 @@ ITI_DURATION: float = 0.1
 CUE_DURATION: float = 1
 # For 9 targets: No. of subspeller = 3; No. of Character = 3
 # For 16 targets: No. of subspeller = 4; No. of Character = 4
-NO_SUBSPELLER: int = 3 # subspeller available n the experiment
-NO_CHARACTER: int = 3 # number of characters in each subspellers
+NO_SUBSPELLER: int = 4 # subspeller available n the experiment
+NO_CHARACTER: int = 4 # number of characters in each subspellers
 OFFSET_VALUE: int = 1250
 
 ###########################
@@ -31,19 +31,19 @@ OFFSET_VALUE: int = 1250
 ###########################
 
 #9 targets
-FREQS: list = [8, 8, 8, 8.6, 8.6, 8.6, 9, 9, 9]
+# FREQS: list = [8, 8, 8, 8.6, 8.6, 8.6, 9, 9, 9]
 #16 targets
-# FREQS: list = [8, 8, 8.6, 8.6, 8, 8, 8.6, 8.6, 9, 9, 9.6, 9.6, 9, 9 ,9.6, 9.6]
+FREQS: list = [8, 8, 8.6, 8.6, 8, 8, 8.6, 8.6, 9, 9, 9.6, 9.6, 9, 9 ,9.6, 9.6]
 
 ###########################
 # POSITION
 ###########################
 
 #9 targets
-POSITIONS: list = [(-800, 200), (0, 200), (800, 200), (-800, 0), (0, 0), (800, 0), (-800, -200), (0, -200), (800, -200)]
+# POSITIONS: list = [(-800, 200), (0, 200), (800, 200), (-800, 0), (0, 0), (800, 0), (-800, -200), (0, -200), (800, -200)]
 
 #16 targets
-# POSITIONS: list = [(-800, 300), (- 400, 300), (400, 300), (800, 300), (-800, 100), (- 400, 100), (400, 100), (800, 100),(-800, -100), (- 400, -100), (400, -100), (800, -100), (-800,-300), (-400, -300), (400, -300), (800, -300)]
+POSITIONS: list = [(-800, 300), (- 400, 300), (400, 300), (800, 300), (-800, 100), (- 400, 100), (400, 100), (800, 100),(-800, -100), (- 400, -100), (400, -100), (800, -100), (-800,-300), (-400, -300), (400, -300), (800, -300)]
 
 AMPLITUDE: float = 1.0
 
@@ -52,37 +52,37 @@ AMPLITUDE: float = 1.0
 ###########################
 
 #9 targets
-PHASES: list = [0 , 0 , 0 , 1.05 , 1.05, 1.05, 1.75, 1.75, 1.75]
+# PHASES: list = [0 , 0 , 0 , 1.05 , 1.05, 1.05, 1.75, 1.75, 1.75]
 
 #16 targets
-# PHASES: list = [0 , 0 , 1.05 , 1.05, 0 , 0, 1.05 , 1.05 , 1.75 , 1.75, 0.80 , 0.80, 1.75, 1.75, 0.80, 0.80]
+PHASES: list = [0 , 0 , 1.05 , 1.05, 0 , 0, 1.05 , 1.05 , 1.75 , 1.75, 0.80 , 0.80, 1.75, 1.75, 0.80, 0.80]
 
 ###########################
 # TARGET CHARACTERS
 ###########################
 
 #9 targets
-TARGET_CHARACTERS:list = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+# TARGET_CHARACTERS:list = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
 
 #16 targets
-# TARGET_CHARACTERS:list = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
+TARGET_CHARACTERS:list = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"]
 
 ###########################
 # SUBSPELLER DICTIONARY
 ###########################
 
 #9 targets
-SUBSPELLERS:dict = {"1": ["A", "D", "G"],
-                    "2": ["B", "E", "H"],
-                    "3": ["C", "F", "I"]
-                    }
+# SUBSPELLERS:dict = {"1": ["A", "D", "G"],
+#                     "2": ["B", "E", "H"],
+#                     "3": ["C", "F", "I"]
+#                     }
 
 #16 targets
-# SUBSPELLERS:dict = {"1": ["A", "B", "E", "F"],
-#                     "2": ["C", "D", "G", "H"],
-#                     "3": ["I", "J", "M", "N"],
-#                     "4": ["K", "L", "O", "P"]
-#                     }
+SUBSPELLERS:dict = {"1": ["A", "B", "E", "F"],
+                    "2": ["C", "D", "G", "H"],
+                    "3": ["I", "J", "M", "N"],
+                    "4": ["K", "L", "O", "P"]
+                    }
 
 
 SERIAL_PORT:str = "COM3"
