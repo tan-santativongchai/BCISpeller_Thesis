@@ -181,9 +181,9 @@ def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, phase =
     # this loop is for generating timeline using order above
     for i in range(m):
         j=0
-        if(i>m//2): #in case of column, we skip the order by number of column because we order the alphaet by row in this case.
+        if(i>m//r): #in case of column, we skip the order by number of column because we order the alphaet by row in this case.
             j+=c
-        if(i < m//2): # ROW FLASHING
+        if(i < m//r): # ROW FLASHING
             timeline[i::2, part_shuffle[i]] = 1
         else: # COLUMN FLASHING
             timeline[j:j+2, part_shuffle[i]] = 1
