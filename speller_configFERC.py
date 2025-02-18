@@ -17,7 +17,7 @@ SIZE: int = 100
 NUM_BLOCK: int = 10
 NUM_TRIAL: int = 2
 NUM_SESSION: int = 3
-EPOCH_DURATION: float = 1
+EPOCH_DURATION: float = 0.5
 ITI_DURATION: float = 0.1
 CUE_DURATION: float = 1
 # For 9 targets: No. of subspeller = 3; No. of Character = 3
