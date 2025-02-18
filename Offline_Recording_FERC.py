@@ -86,7 +86,7 @@ def eegMarking(board,marker):
     board.insert_marker(marker)
     time.sleep(0.1)
 
-def flicker(board):
+def flicker(board, timeline):
     print("POSITIONS", POSITIONS)
     global frames
     global t0
@@ -116,7 +116,8 @@ def flicker(board):
         # f: is frame_idx
         start_time = trialClock.getTime()
         # Generate the order of flashing
-        timeline = gen_timeline(n=NO_SUBSPELLER, r=NO_ROW, c=NO_COL, overlap=0, isShuffle=False, phase = 3)
+        if(timeline == []):
+            timeline = gen_timeline(n=NO_SUBSPELLER, r=NO_ROW, c=NO_COL, overlap=0, isShuffle=True, flick_phase = 3)
 
         # marked:bool = False
         eegMarking(board,marker)
@@ -136,17 +137,18 @@ def flicker(board):
         stop_time = trialClock.getTime()
         print("Elapsed time ==>", stop_time - start_time, timeline.shape)
         print("Timeline Shape ==>", timeline.shape[2], range(timeline.shape[2]))
+    return timeline
 
 
-def gen_timeline(n:int, r:int, c:int, overlap:float, isShuffle:bool=False):
+def gen_timeline(n:int, r:int, c:int, overlap:float, flick_phase:int, isShuffle:bool=False):
     import numpy as np
     timeline = []
     for _ in range(n):
-        timeline.append(gen_timeline_FERC(r, c, overlap, isShuffle))
+        timeline.append(gen_timeline_FERC(r, c, overlap, isShuffle, flick_phase))
     timeline = np.vstack(timeline)
     return timeline
 
-def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, phase = 2):
+def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, flick_phase:int=2):
     # overlap:float
     #   0: No 2 stimuli flicker at the same time
     # 0.5: 2 stimuli overlap by half
@@ -172,7 +174,7 @@ def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, phase =
         if(i==0):
             part_shuffle.append(list(range(start,part)))
         else:
-            part_shuffle.append(list(range(start-phase,part)))
+            part_shuffle.append(list(range(start-flick_phase,part)))
         start = part
     # If we randomise the orther, this following function will shuffle the order above
     if(isShuffle):
@@ -184,9 +186,9 @@ def gen_timeline_FERC(r:int, c:int, overlap:float, isShuffle:bool=False, phase =
         if(i>m//r): #in case of column, we skip the order by number of column because we order the alphaet by row in this case.
             j+=c
         if(i < m//r): # ROW FLASHING
-            timeline[i::2, part_shuffle[i]] = 1
+            timeline[i::r, part_shuffle[i]] = 1
         else: # COLUMN FLASHING
-            timeline[j:j+2, part_shuffle[i]] = 1
+            timeline[j:j+r, part_shuffle[i]] = 1
         start = part
 
     timeline = np.expand_dims(timeline, axis=0)
@@ -226,6 +228,7 @@ def main():
         cal_start.draw()
         window.flip()
         core.wait(10)
+        timeline = []
 
         for block in range(NUM_BLOCK):
             # a.hear('A_')
@@ -242,7 +245,7 @@ def main():
                     target.autoDraw = True
                     # get_keypress()
                 print("Sequence is", sequence)
-                flicker(board_shim)
+                timeline = flicker(board_shim, timeline)
                 # At the end of the trial, calculate real duration and amount of frames
                 t1 = trialClock.getTime()  # Time at end of trial
                 elapsed = t1 - t0
