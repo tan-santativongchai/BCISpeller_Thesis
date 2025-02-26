@@ -1,0 +1,24 @@
+[project]
+name = "eegmultithreads"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "", email = ""},
+]
+dependencies = [
+    "psychopy==2024.2.5"
+]
+requires-python = "==3.10.6"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+Windows = [
+    'pyglet==1.4.11; platform_system == "Windows"'
+]
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.options]
+lock = ["--no-cross-platform"]
