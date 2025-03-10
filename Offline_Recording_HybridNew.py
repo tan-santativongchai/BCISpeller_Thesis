@@ -6,83 +6,114 @@ import logging
 import platform
 import random
 import time
-import multiprocessing as mp
-from functools import partial
+from math import sqrt
 
 import brainflow
 import numpy as np
 # from beeply.notes import *
 from brainflow.board_shim import BoardShim, BrainFlowInputParams
 from psychopy import core, event, visual  # import some libraries from PsychoPy
-from speller_config import *
+from psychopy.visual.elementarray import ElementArrayStim
+from speller_configHybridNew import *
 
 from utils.common import drawTextOnScreen, getdata_offline, save_raw
-from utils.gui_hybrid import Stimuli, get_screen_settings
+from utils.gui_hybridNew import *
 import mne
 
+pos = np.array(POSITIONS)
+assert pos.shape   == (NUM_STIMULI, 2)
+assert len(FREQS)  == NUM_STIMULI
+assert len(PHASES) == NUM_STIMULI
+colors = np.zeros( (NUM_STIMULI,3) )
 # a = beeps(800)
 
-# Window parameters
+#create a window
 system = platform.system()
 width, height = get_screen_settings(system)
 
-#create a window
-window = visual.Window([width, height], screen=1, color=[1,1,1],blendMode='avg', useFBO=True, units="pix", fullscr=True)
+REFRESH_RATE = 60
+# Window parameters
+win_builder = WindowBuilder(size=(width, height), refresh_rate=REFRESH_RATE)
+WINDOW = win_builder.get_window()
+STIMULUS = ElementArrayStim(win=WINDOW, 
+            nElements=NUM_STIMULI, 
+            fieldShape="square", 
+            elementMask=None,
+            elementTex=None,
+            sizes=SIZE, 
+            colors=colors,
+            xys=pos,
+            units="pix")
 
-refresh_rate = round(window.getActualFrameRate())
+refresh_rate = round(WINDOW.getActualFrameRate())
 print("Refresh Rate ==>", refresh_rate)
 
-# Time conversion to frames
 epoch_frames = int(EPOCH_DURATION * refresh_rate)
 print("Epoch frames ==>",epoch_frames)
 iti_frames = int(ITI_DURATION * refresh_rate)
 iti_frames_cal = int(0.8 * refresh_rate)
-cue_frames = int(CUE_DURATION * refresh_rate)   
-
+cue_frames = int(CUE_DURATION * refresh_rate) 
 #Presentation content
 
-cue = visual.Rect(window, width=WIDTH, height=HEIGHT, pos=[0, 0], lineWidth=6, lineColor='red')
+cue = visual.Rect(WINDOW, width=WIDTH, height=HEIGHT, pos=[0, 0], lineWidth=6, lineColor='red')
 
 calib_text_start = "Starting callibration phase.Please avoid moving or blinking.\n\
 You may blink when shifting your gaze.Focus your target on the characters presented with red cue."
 
 calib_text_end = "Calibration phase completed"
-cal_start = visual.TextStim(window, text=calib_text_start, color=(-1., -1., -1.))
-cal_end = visual.TextStim(window, text=calib_text_end, color=(-1., -1., -1.))
+cal_start = visual.TextStim(WINDOW, text=calib_text_start, color=(-1., -1., -1.))
+cal_end = visual.TextStim(WINDOW, text=calib_text_end, color=(-1., -1., -1.))
 
-targets = {f"{target}": visual.TextStim(win=window, text=target, pos=pos, color=(-1., -1., -1.), height=HEIGHT_OF_TARGET)
+targets = {f"{target}": visual.TextStim(win=WINDOW, text=target, pos=pos, color=(-1., -1., -1.), height=HEIGHT_OF_TARGET)
         for pos, target in zip(POSITIONS, TARGET_CHARACTERS)}
 
 
 wave_type = "sin"
-flickers = {f"{target}":Stimuli(window=window, frequency=f, phase=phase, amplitude=AMPLITUDE, 
+flickers = {f"{target}":Stimuli(window=WINDOW, frequency=f, phase=phase, amplitude=AMPLITUDE, 
                                     wave_type=wave_type, duration=EPOCH_DURATION, fps=refresh_rate,
                                     base_pos=pos, height=HEIGHT, width=WIDTH)
             for f, pos, phase, target in zip(FREQS, POSITIONS, PHASES, TARGET_CHARACTERS)}
 
-hori_divider = visual.Line(window, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
-ver_divider_1 = visual.Line(window, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
+hori_divider = visual.Line(WINDOW, start=HORI_DIVIDER_START, end=HORI_DIVIDER_END, lineColor='black')
+ver_divider_1 = visual.Line(WINDOW, start=VER_DIVIDER_1_START, end=VER_DIVIDER_1_END, lineColor='black')
 
 block_break_text = f"Block Break {BLOCK_BREAK} sec. Please do not move towards the end of break."
 # block_break_start = visual.TextStim(window, text=block_break_text, color=(1., 1., 1.))
 # counter = visual.TextStim(window, text='', pos=(0, 50), color=(1., 1., 1.))
-block_break_start = visual.TextStim(window, text=block_break_text, color=(-1., -1., -1.))
-counter = visual.TextStim(window, text='', pos=(0, 50), color=(-1., -1., -1.))
+block_break_start = visual.TextStim(WINDOW, text=block_break_text, color=(-1., -1., -1.))
+counter = visual.TextStim(WINDOW, text='', pos=(0, 50), color=(-1., -1., -1.))
 
 def get_keypress():
     keys = event.getKeys()
     if keys and keys[0] == 'escape':
-        window.close()
+        WINDOW.close()
         core.quit()
     else: 
         return None
+
+def get_frames(order):
+    # frames is a shape of (n_frame, n_stimuli, n_color)
+    num_char = 1
+    frames = []
+    for sti in range(NUM_STIMULI):
+        phase = PHASES[sti]
+        freq = FREQS[sti]
+        # flick = np.ones(EPOCH_DURATION*REFRESH_RATE)
+        flick = np.sin(2 * np.pi * freq * np.arange(0,EPOCH_DURATION,1/REFRESH_RATE) + (phase * np.pi))
+        # adjust range to fit [-1,1]
+        flick[order[sti]] = 1
+        flick = np.expand_dims(((flick * 2) - 1), axis=1)
+        color = np.concatenate([flick,flick,flick], axis=1)
+        frames.append(np.expand_dims(color, axis=0))
+    frames = np.concatenate(frames, axis=0)
+    return frames
 
 def eegMarking(board,marker):
     print("Inserting marker", marker)
     board.insert_marker(marker)
     time.sleep(0.1)
 
-def flicker(board):
+def flicker(board, timeline, order):
     print("POSITIONS", POSITIONS)
     global frames
     global t0
@@ -93,13 +124,11 @@ def flicker(board):
         target_pos = (target_flicker.base_x, target_flicker.base_y)
         marker = MARKERS[str(target)]
 
-
-        t0 = trialClock.getTime()  # Retrieve time at start of cue presentation
         #Display the cue
         cue.pos = target_pos
         for frame in range(cue_frames):
                 cue.draw()
-                window.flip()
+                WINDOW.flip()
 
         frames = 0
         # eegMarking(board, MARKERS['trial_start'])
@@ -110,87 +139,67 @@ def flicker(board):
         # n: number of sub-speller
         # m: is each character in the sub speller
         # f: is frame_idx
-        start_time = trialClock.getTime()
-        timeline = gen_timeline(n=NO_SUBSPELLER, m=NO_CHARACTER, overlap=0.5, isShuffle=False)
-        # marked:bool = False
-        eegMarking(board,marker)
-        for t_idx in range(timeline.shape[2]):
-            get_keypress()
-            for n_idx in range(timeline.shape[0]):
-                frame = timeline[n_idx,:,t_idx]
-                chars = SUBSPELLERS[str(n_idx+1)]
-                for idx, char in enumerate(chars):
-                    get_keypress()
-                    if(frame[idx] == -1):
-                        flickers[char].draw2(frame=frame[idx], amp_override=-1)
-                    else:
-                        # if(marked == False and char == target):
-                        #     eegMarking(board,marker)
-                        #     marked = True
-                        flickers[char].draw2(frame=frame[idx])
-            window.flip()
-        stop_time = trialClock.getTime()
-        print("Elapsed time ==>", stop_time - start_time, timeline.shape)
+        # Generate the order of flashing
+        FRAMES = get_frames(order)
+        FRAMES = np.swapaxes(FRAMES, 0,1)
+
+        for frame in FRAMES:
+            STIMULUS.draw()
+            STIMULUS.setColors(colors=frame, colorSpace='rgb')
+            WINDOW.flip()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+    finally:
+        print("==== REPORT ====")
+        print(f'Overall, {WINDOW.nDroppedFrames} frames were dropped.')
 
 
-def gen_timeline(n:int, m:int, overlap:float, isShuffle:bool=False):
-    import numpy as np
-    timeline = []
-    for _ in range(n):
-        timeline.append(gen_timeline_subspeller(m, overlap, isShuffle))
-    timeline = np.vstack(timeline)
-    return timeline
-
-def gen_timeline_subspeller(m:int, overlap:float, isShuffle:bool=False):
-    # overlap:float
-    #   0: No 2 stimuli flicker at the same time
-    # 0.5: 2 stimuli overlap by half
-    #   1: 2 stimuli flicker at the same time 
-    import numpy as np
-
-    # import random
-    # characters = list(range(m))
-    # if(isShuffle):
-    #     random.shuffle(characters)
-
-    n = m
-    d = epoch_frames
-    # print("d ==>", d)
-    # print("n ==>", n)
-    # print("overlap ==>", overlap)
-    t = int(d*(((n-1) * (1-overlap)) + 1))
-    # print("t ==>", t)
-    # print(f"{n=} {m=} {d=} {t=}")
-    timeline = np.zeros((n, t), dtype=int)
-    # print(f"{timeline.shape}")
-    for i in range(n):
-        start_offset = int(i * d * (1 - overlap))
-        end_offset = start_offset + d
-        # print(f"{i=} {start_offset=} {end_offset=}")
-        # idx = characters.index(characters[i])
-        timeline[i, start_offset:end_offset] = range(1,d+1)
-    timeline += -1
-
-    if(isShuffle):
-        np.random.shuffle(timeline)
-    # print("Timeline shape before adding dimension ==>", timeline.shape)
-    # print(timeline)
-    
-    timeline = np.expand_dims(timeline, axis=0)
-    # print("Timeline shape after adding dimension ==>", timeline.shape)
-    # print(timeline)
-    return timeline
-
+def drawDisplayBox():
+    # Drawing the grid
+    hori_divider.autoDraw = True
+    ver_divider_1.autoDraw = True
+    # Display target characters
+    for target in targets.values():
+        target.autoDraw = True
+        # get_keypress()
+    print("Sequence is", sequence)
 
 def main():
     global sequence
     global trialClock
 
     random.seed(42)
+    # set the order to white then will add one later.
+    default_order = [True]*EPOCH_DURATION*REFRESH_RATE
+    pt = int(EPOCH_DURATION*REFRESH_RATE/(NO_CHARACTER+1))
+    unarranged_order = []
+    order = []
+    _ = []
+    
+    if sqrt(NO_SUBSPELLER)%1!=0:
+        hori_sub_no = int(sqrt(NO_SUBSPELLER)+1)
+    else:
+        hori_sub_no = int(sqrt(NO_SUBSPELLER))
 
-    for key in SUBSPELLERS:
-        random.shuffle(SUBSPELLERS[key])
+    for ch in range(NO_CHARACTER):
+        default_order[ch*pt:pt*(2+ch)] = [False]*pt*2
+        unarranged_order.append(default_order)
+        default_order = [True]*EPOCH_DURATION*REFRESH_RATE
 
+    for i in range(NO_SUBSPELLER):
+        random.shuffle(unarranged_order)
+        if i >= hori_sub_no:
+            order+=_
+            _=[]
+        for j in range(NO_CHARACTER):
+            if j < NO_CHARACTER/2:
+                order.append(unarranged_order[j])
+            else:
+                _.append(unarranged_order[j])
+    order+=_
+            
     BoardShim.enable_dev_board_logger()
 
     #brainflow initialization 
@@ -215,14 +224,15 @@ def main():
         # Starting the display
         trialClock = core.Clock()
         cal_start.draw()
-        window.flip()
+        WINDOW.flip()
         core.wait(10)
+        timeline = []
 
         for block in range(NUM_BLOCK):
             # a.hear('A_')
-            drawTextOnScreen('Starting block ' + str(block + 1) ,window)
+            drawTextOnScreen('Starting block ' + str(block + 1) ,WINDOW)
             core.wait(0.5)
-            sequence = random.sample(TARGET_CHARACTERS, len(TARGET_CHARACTERS))
+            sequence = TARGET_CHARACTERS
             for trials in range(NUM_TRIAL):
                 get_keypress()
                 # Drawing the grid
@@ -233,12 +243,13 @@ def main():
                     target.autoDraw = True
                     # get_keypress()
                 print("Sequence is", sequence)
-                flicker(board_shim)
+                flicker(board_shim, timeline, order)
                 # At the end of the trial, calculate real duration and amount of frames
                 t1 = trialClock.getTime()  # Time at end of trial
                 elapsed = t1 - t0
                 print(f"Time elapsed: {elapsed}")
                 print(f"Total frames: {frames}")
+
            
             # clearing the screen
             hori_divider.autoDraw = False
@@ -256,15 +267,15 @@ def main():
                     time_remaining = countdown_timer.getTime()
                     counter.text = f'Time remaining: {int(time_remaining)}'
                     counter.draw()
-                    window.flip()
+                    WINDOW.flip()
 
             block += 1
             block_break_start.autoDraw = False
-            window.flip()
+            WINDOW.flip()
             # window.color = 'white'
             # window.flip()
 
-        drawTextOnScreen('End of experiment, Thank you',window)
+        drawTextOnScreen('End of experiment, Thank you',WINDOW)
         #Adding buffer of 10 sec at the end
         core.wait(10)
         # saving the data from 1 block
@@ -287,8 +298,14 @@ def main():
         board_shim.release_session()
 
     #cleanup
-    window.close()
+    WINDOW.close()
     core.quit()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Keyboard Interrupt")
+    finally:
+        print("==== REPORT ====")
+        print(f'Overall, {WINDOW.nDroppedFrames} frames were dropped.')

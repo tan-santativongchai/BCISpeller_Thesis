@@ -16,7 +16,7 @@ from psychopy import core, event, visual  # import some libraries from PsychoPy
 from speller_configFERC import *
 
 from utils.common import drawTextOnScreen, getdata_offline, save_raw
-from utils.gui_FERC import Stimuli, get_screen_settings
+from utils.gui_hybrid import Stimuli, get_screen_settings
 import mne
 ##########################
 # READ ME

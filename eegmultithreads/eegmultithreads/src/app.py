@@ -3,7 +3,6 @@ from window import WindowBuilder, SystemScreen
 from page import *
 from psychopy.visual.elementarray import ElementArrayStim
 
-
 # Keep in mind about timing
 # https://psychopy.org/coder/codeStimuli.html
 # TL;DR. The best method to do timing is framing.
@@ -14,23 +13,17 @@ from psychopy.visual.elementarray import ElementArrayStim
 # https://psychopy.org/general/timing/reducingFrameDrops.html
 
 
-NUM_STIMULI:int = 8
+NUM_STIMULI:int = 16
 STIMULI_SIZE:int = 50
-POSITIONS:list[tuple[int,int]] = [
-    (-800, 300), 
-    (0, 300), 
-    (800, 300), 
-    (-800, 0), 
-    (800, 0), 
-    (-800, -300), 
-    (0, -300), 
-    (800, -300)
-    ]
-FREQS :list[float] = [1,    2,    3,  8.6,  8.8,    9,  9.2,  9.4]
-PHASES:list[float] = [0, 0.35, 0.70, 1.05, 1.40, 1.75, 0.10, 0.45]
-EPOCH_DURATION:float = 2
+POSITIONS = [(-800, 300), (-400, 300), (400, 300), (800, 300), 
+                   (-800, 100), (-400, 100), (400, 100), (800, 100),
+                   (-800, -100), (-400, -100), (400, -100), (800, -100), 
+                   (-800,-300), (-400, -300), (400, -300), (800, -300)]
+FREQS = [8, 8, 8.6, 8.6, 8, 8, 8.6, 8.6, 9, 9, 9.6, 9.6, 9, 9 ,9.6, 9.6]
+PHASES = [0 , 0 , 1.05 , 1.05, 0 , 0, 1.05 , 1.05 , 1.75 , 1.75, 0.80 , 0.80, 1.75, 1.75, 0.80, 0.80]
+EPOCH_DURATION = 4
 
-pos:np.ndarray = np.array(POSITIONS)
+pos = np.array(POSITIONS)
 assert pos.shape   == (NUM_STIMULI, 2)
 assert len(FREQS)  == NUM_STIMULI
 assert len(PHASES) == NUM_STIMULI
@@ -48,11 +41,11 @@ colors = np.zeros( (NUM_STIMULI,3) )
 # win_builder = WindowBuilder(screen=sys_screen.get_screen(0))
 
 ### Method 2: create window manually
-REFRESH_RATE:int = 60
+REFRESH_RATE = 60
 win_builder = WindowBuilder(size=(1920,1080), refresh_rate=REFRESH_RATE)
 WINDOW = win_builder.get_window()
 
-def get_frames() -> np.ndarray:
+def get_frames():
     # frames is a shape of (n_frame, n_stimuli, n_color)
     n_frames = REFRESH_RATE * EPOCH_DURATION
     frames = []
@@ -67,7 +60,7 @@ def get_frames() -> np.ndarray:
     frames = np.concatenate(frames, axis=0)
     return frames
 
-FRAMES:np.ndarray = get_frames()
+FRAMES = get_frames()
 assert FRAMES.shape == (NUM_STIMULI, REFRESH_RATE * EPOCH_DURATION, 3)
 # Swap axis for easy operation
 FRAMES = np.swapaxes(FRAMES, 0,1)

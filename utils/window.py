@@ -1,3 +1,4 @@
+import numpy as np
 from psychopy import visual, logging, monitors
 import win32api
 
@@ -7,7 +8,7 @@ class Screen:
     refresh_rate:int
     idx:int
     _device:object
-
+ 
     def __init__(self, idx:int, device_name:str):
         self.name = device_name
         device = win32api.EnumDisplaySettings(device_name, -1)
